@@ -9,7 +9,7 @@ services:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
@@ -24,11 +24,8 @@ services:
     command: ["--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: rutasur2026
     healthcheck:
-      test: test $$(echo "rs.initiate().ok || rs.status().ok" | mongosh -u root -p rutasur2026 --quiet) -eq 1
+      test: test $$(echo "rs.initiate().ok || rs.status().ok" | mongosh --quiet) -eq 1
       interval: 10s
       start_period: 30s
 
@@ -43,6 +40,7 @@ services:
     depends_on:
       - kafka
 
+  # SERVICIOS
   simulador:
     build:
       context: ./services/simulador
@@ -53,3 +51,13 @@ services:
       - "4000:4000"
     depends_on:
       - kafka
+
+  proyector:
+    build:
+      context: ./services/proyector
+    container_name: rutasur-proyector
+    env_file:
+      - .env
+    depends_on:
+      - kafka
+      - mongo
