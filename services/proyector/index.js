@@ -4,12 +4,12 @@ const mongoose = require("mongoose");
 const { Envio, EventoProcesado } = require("./models");
 
 const kafka = new Kafka({
-    clientId: 'proyector',
-    brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
-    retry: {
-        initialRetryTime: 1000,
-        retries: 10 // Intenta conectarse 10 veces antes de rendirse
-    }
+  clientId: "proyector",
+  brokers: [process.env.KAFKA_BROKERS || "localhost:9092"],
+  retry: {
+    initialRetryTime: 1000,
+    retries: 10, // Intenta conectarse 10 veces antes de rendirse
+  },
 });
 
 const consumer = kafka.consumer({ groupId: "proyector" });
@@ -61,31 +61,45 @@ async function procesarEvento(message, topic) {
 
   // Regla de Secuencia: Descartar si el evento llegó fuera de orden
   if (secuencia && secuencia <= envio.ultimaSecuencia) {
-        console.warn(`[Proyector] Evento fuera de orden descartado para ${shipmentId} (Llegó: ${secuencia}, Actual: ${envio.ultimaSecuencia})`);
-        return;
+    console.warn(
+      `[Proyector] Evento fuera de orden descartado para ${shipmentId} (Llegó: ${secuencia}, Actual: ${envio.ultimaSecuencia})`,
+    );
+    return;
   }
 
   // Aplicar cambios según el estado (Embeber el historial)
-  if (topic === 'notificaciones.enviadas') {
-        // Si es una notificación, solo se agrega al historial sin tocar el estado
-        envio.historial.push({ 
-            tipo: 'NOTIFICACION_ENVIADA', 
-            detalle: evento.tipoAviso, 
-            ocurridoEn: evento.ocurridoEn, 
-            eventId 
-        });
-    } else {
-        // Si es envios.estados o envios.reprogramaciones, se actualiza el estado
-        envio.estado = tipo;
-        if (secuencia) envio.ultimaSecuencia = secuencia;
-        if (evento.zonaId) envio.zonaId = evento.zonaId;
-        if (evento.hubId) envio.hubId = evento.hubId;
-        
-        envio.historial.push({ tipo, ocurridoEn: evento.ocurridoEn, eventId });
+  if (topic === "notificaciones.enviadas") {
+    // Si es una notificación, solo se agrega al historial sin tocar el estado
+    envio.historial.push({
+      tipo: "NOTIFICACION_ENVIADA",
+      detalle: evento.tipoAviso,
+      ocurridoEn: evento.ocurridoEn,
+      eventId,
+    });
+  } else if (topic === "alertas.sla") {
+    if (evento.tipo === "ALERTA_GENERADA") {
+      console.log(
+        `[Proyector] Registrando Alerta SLA para ${shipmentId} (Prioridad: ${evento.prioridad})`,
+      );
+      envio.historial.push({
+        tipo: evento.tipo,
+        detalle: evento.causa,
+        ocurridoEn: evento.ocurridoEn,
+        eventId,
+      });
     }
+  } else {
+    // Si es envios.estados o envios.reprogramaciones, se actualiza el estado
+    envio.estado = tipo;
+    if (secuencia) envio.ultimaSecuencia = secuencia;
+    if (evento.zonaId) envio.zonaId = evento.zonaId;
+    if (evento.hubId) envio.hubId = evento.hubId;
 
-    await envio.save();
-    console.log(`[Proyector] Envío ${shipmentId} procesó evento de ${topic}`);
+    envio.historial.push({ tipo, ocurridoEn: evento.ocurridoEn, eventId });
+  }
+
+  await envio.save();
+  console.log(`[Proyector] Envío ${shipmentId} procesó evento de ${topic}`);
 }
 
 async function start() {
@@ -94,9 +108,16 @@ async function start() {
   await consumer.connect();
 
   // El proyector escucha varios topics, empezando por los estados
-  await consumer.subscribe({ topic: 'envios.estados', fromBeginning: true });
-  await consumer.subscribe({ topic: 'envios.reprogramaciones', fromBeginning: true });
-  await consumer.subscribe({ topic: 'notificaciones.enviadas', fromBeginning: true });
+  await consumer.subscribe({ topic: "envios.estados", fromBeginning: true });
+  await consumer.subscribe({
+    topic: "envios.reprogramaciones",
+    fromBeginning: true,
+  });
+  await consumer.subscribe({
+    topic: "notificaciones.enviadas",
+    fromBeginning: true,
+  });
+  await consumer.subscribe({ topic: "alertas.sla", fromBeginning: true });
 
   await consumer.run({
     autoCommit: false, // Confirmación manual (decisión técnica)

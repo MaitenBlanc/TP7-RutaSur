@@ -131,6 +131,35 @@ async function simularEnvioAusente() {
     return shipmentId;
 }
 
+// Generador de un envío que se queda trabado y genera riesgo de SLA
+async function simularEnvioDemorado() {
+    const shipmentId = `SHIP-DEMORA-${Date.now().toString().slice(-4)}`;
+    
+    // Configuramos la promesa para que venza en apenas 8 horas (simuladas)
+    const fechaVencimiento = new Date();
+    fechaVencimiento.setHours(fechaVencimiento.getHours() + 8);
+
+    await publicarEvento('envios.promesas', {
+        eventId: uuidv4(),
+        shipmentId,
+        ocurridoEn: new Date().toISOString(),
+        venceEn: fechaVencimiento.toISOString(),
+        version: 1
+    }, shipmentId);
+
+    // El paquete se crea, pero NUNCA llega a INGRESADO_HUB ni sale A REPARTO
+    await publicarEvento('envios.estados', {
+        eventId: uuidv4(),
+        shipmentId,
+        tipo: 'CREADO',
+        ocurridoEn: new Date().toISOString(),
+        secuencia: 1,
+        version: 1
+    }, shipmentId);
+
+    return shipmentId;
+}
+
 // API REST para los botones del Panel de Demo en Next.js
 app.post('/api/escenarios/feliz', async (req, res) => {
     const id = await simularEnvioFeliz();
@@ -140,6 +169,11 @@ app.post('/api/escenarios/feliz', async (req, res) => {
 app.post('/api/escenarios/ausente', async (req, res) => {
     const id = await simularEnvioAusente();
     res.json({ message: 'Escenario Ausente disparado', shipmentId: id });
+});
+
+app.post('/api/escenarios/demorado', async (req, res) => {
+    const id = await simularEnvioDemorado();
+    res.json({ message: 'Escenario Demorado disparado. Espera un minuto para ver la alerta.', shipmentId: id });
 });
 
 app.post('/api/escenarios/rafaga', async (req, res) => {
@@ -158,7 +192,8 @@ async function start() {
             { topic: 'envios.promesas', numPartitions: 1 },
             { topic: 'envios.reprogramaciones', numPartitions: 1 },
             { topic: 'notificaciones.enviadas', numPartitions: 1 },
-            { topic: 'envios.estados.dlq', numPartitions: 1 }
+            { topic: 'envios.estados.dlq', numPartitions: 1 },
+            { topic: 'alertas.sla', numPartitions: 1 }
         ]
     });
     await admin.disconnect();

@@ -97,3 +97,18 @@ services:
         condition: service_healthy
       simulador:
         condition: service_started
+
+  monitor-sla:
+    build:
+      context: ./services/monitor-sla
+    container_name: rutasur-monitor-sla
+    env_file:
+      - .env
+    restart: always
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      simulador:
+        condition: service_started
