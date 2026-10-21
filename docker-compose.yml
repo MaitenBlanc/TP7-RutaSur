@@ -112,3 +112,18 @@ services:
         condition: service_healthy
       simulador:
         condition: service_started
+
+  analitica:
+    build:
+      context: ./services/analitica
+    container_name: rutasur-analitica
+    env_file:
+      - .env
+    restart: always
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      simulador:
+        condition: service_started
