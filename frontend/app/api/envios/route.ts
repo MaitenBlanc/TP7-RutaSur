@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { connectDB } from '../../../lib/mongodb';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   await connectDB();
   // Trae los últimos 15 envíos ordenados por fecha de actualización
