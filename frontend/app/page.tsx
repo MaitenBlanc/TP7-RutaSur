@@ -199,7 +199,7 @@ export default function TorreDeControl() {
               href="/analitica"
               className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
             >
-              Panel Analítico (CU4)
+              Panel Analítico
             </Link>
 
             <ThemeToggle />
@@ -404,7 +404,7 @@ export default function TorreDeControl() {
                   Cola de Alertas de SLA Abiertas (Priorizada)
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Se cierran automáticamente cuando el envío pasa a ENTREGADO (CU3).
+                  Se cierran automáticamente cuando el envío pasa a ENTREGADO.
                 </p>
               </div>
               <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200">

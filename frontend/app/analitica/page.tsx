@@ -172,7 +172,7 @@ export default function AnaliticaDashboard() {
         <header className="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b dark:border-gray-800 pb-4">
           <div>
             <h1 className="text-3xl font-bold text-blue-900 dark:text-blue-400">
-              Panel Analítico de Gerencia (CU4)
+              Panel Analítico de Gerencia
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Agregaciones precalculadas en <code>metricas_diarias</code> + Reprocesamiento histórico con nuevo grupo de consumidores
@@ -297,7 +297,7 @@ export default function AnaliticaDashboard() {
           <section className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-5 rounded-xl space-y-3">
             <div className="flex justify-between items-center">
               <h2 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
-                Verificación Criterio CU4: Recuento Manual (Semilla {recuentoManualSemilla.seed}) vs Analítica en MongoDB
+                Verificación Criterio: Recuento Manual (Semilla {recuentoManualSemilla.seed}) vs Analítica en MongoDB
               </h2>
               <button
                 onClick={() => setRecuentoManualSemilla(null)}
