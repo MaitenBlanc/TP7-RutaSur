@@ -13,6 +13,7 @@
   "dependencies": {
     "dotenv": "^18.0.8",
     "kafkajs": "^2.2.4",
+    "mongoose": "^9.11.2",
     "uuid": "^14.0.3"
   }
 }

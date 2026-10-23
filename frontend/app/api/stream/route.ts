@@ -1,48 +1,67 @@
-import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
-import { connectDB } from '@/lib/mongodb';
+import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
+import { connectDB } from "@/lib/mongodb";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
- await connectDB();
+  await connectDB();
 
   const stream = new ReadableStream({
     start(controller) {
+      let closed = false;
+      const encoder = new TextEncoder();
+
+      const pushEvent = (origen: string, change: unknown) => {
+        if (closed) return;
+        try {
+          const payload = JSON.stringify({ origen, change, ts: Date.now() });
+          controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+        } catch {
+          // Stream cerrado por el cliente
+        }
+      };
+
       try {
         const db = mongoose.connection;
-        const collection = db.collection('envios');
+        // Los change streams de envios y alertas alimentan las actualizaciones en vivo
+        const enviosStream = db.collection("envios").watch();
+        const alertasStream = db.collection("alertas").watch();
+        const notificacionesStream = db.collection("notificaciones").watch();
 
-        // Inicializa el Change Stream de MongoDB
-        const changeStream = collection.watch();
+        enviosStream.on("change", (change) => pushEvent("envios", change));
+        alertasStream.on("change", (change) => pushEvent("alertas", change));
+        notificacionesStream.on("change", (change) => pushEvent("notificaciones", change));
 
-        changeStream.on('change', (change) => {
-          // Empuja los cambios al frontend vía SSE
-          const data = `data: ${JSON.stringify(change)}\n\n`;
-          controller.enqueue(new TextEncoder().encode(data));
-        });
+        const closeAll = () => {
+          if (closed) return;
+          closed = true;
+          enviosStream.close().catch(() => {});
+          alertasStream.close().catch(() => {});
+          notificacionesStream.close().catch(() => {});
+          try {
+            controller.close();
+          } catch {}
+        };
 
-        changeStream.on('error', (err) => {
-          console.error("Change Stream Error:", err);
-          controller.close();
-        });
+        enviosStream.on("error", closeAll);
+        alertasStream.on("error", closeAll);
+        notificacionesStream.on("error", closeAll);
 
-        // Limpia la conexión si el usuario cierra el navegador
-        req.signal.addEventListener('abort', () => {
-          changeStream.close();
-        });
+        req.signal.addEventListener("abort", closeAll);
       } catch (error) {
-        console.error("Error al iniciar Change Stream:", error);
+        console.error("Error al iniciar Change Streams:", error);
+        closed = true;
         controller.close();
       }
-    }
+    },
   });
 
   return new NextResponse(stream, {
     headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
     },
   });
 }

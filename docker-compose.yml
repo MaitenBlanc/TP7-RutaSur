@@ -83,6 +83,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      mongo:
+        condition: service_healthy
       simulador:
         condition: service_started
 
@@ -94,6 +96,8 @@ services:
       - .env
     depends_on:
       kafka:
+        condition: service_healthy
+      mongo:
         condition: service_healthy
       simulador:
         condition: service_started
@@ -137,6 +141,8 @@ services:
       - "3000:3000"
     environment:
       - MONGO_URI=mongodb://mongo:27017/rutasur
+      - SIMULADOR_URL=http://simulador:4000
+      - NEXT_PUBLIC_SIMULADOR_URL=http://localhost:4000
       - HOSTNAME=0.0.0.0
     depends_on:
       mongo:
