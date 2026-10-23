@@ -133,6 +133,7 @@ flowchart LR
      * **Sin salida** (< 4 h al vencimiento y sin salir a `EN_REPARTO`) → Prioridad **Alta**.
      * **Fallo en el día límite** (`ENTREGA_FALLIDA` y vence hoy) → Prioridad **Alta**.
      * **Vencido** (vencimiento superado sin `ENTREGADO`) → Prioridad **Crítica**.
+     * **Extensión Opcional — Paquetes dormidos en hub** (≥ 6 h simuladas en `INGRESADO_HUB` o `CLASIFICADO` sin recibir el evento esperado `EN_REPARTO`, aún cuando falte mucho para el vencimiento) → Prioridad **Media**.
    * No repite la misma regla sobre el mismo envío y cierra las alertas automáticamente cuando llega `ENTREGADO`.
 4. **CU4 — Analítica de mejora y reprocesamiento histórico:**
    * **Indicador 1:** Tasa de entrega en primer intento (por Zona, Franja horaria y Día).

@@ -93,6 +93,22 @@ async function evaluarEnvio(registro, ahoraSimulado) {
     candidatos.push({ regla: "Sin ingreso", prioridad: "Media" });
   }
 
+  // Paquetes dormidos en hub
+  // Detecta la ausencia del evento esperado (EN_REPARTO) tras permanecer >= 6h simuladas en el hub
+  if (
+    (registro.ultimoEstado === "INGRESADO_HUB" ||
+      registro.ultimoEstado === "CLASIFICADO") &&
+    registro.ingresadoHubEn &&
+    !registro.alertasEmitidas.includes("Paquete dormido en hub")
+  ) {
+    const horasEnHub =
+      (ahoraSimulado.getTime() - new Date(registro.ingresadoHubEn).getTime()) /
+      (1000 * 60 * 60);
+    if (horasEnHub >= 6) {
+      candidatos.push({ regla: "Paquete dormido en hub", prioridad: "Media" });
+    }
+  }
+
   if (candidatos.length === 0) return;
 
   for (const alerta of candidatos) {
@@ -106,6 +122,7 @@ async function evaluarEnvio(registro, ahoraSimulado) {
       $set: {
         ultimoEstado: registro.ultimoEstado,
         venceEn: registro.venceEn,
+        ingresadoHubEn: registro.ingresadoHubEn || null,
         ultimoOcurridoEn: ahoraSimulado,
         alertasEmitidas: registro.alertasEmitidas,
       },
@@ -187,6 +204,7 @@ async function procesarEvento(message, topic, partition) {
         shipmentId: docDb.shipmentId,
         ultimoEstado: docDb.ultimoEstado,
         venceEn: docDb.venceEn,
+        ingresadoHubEn: docDb.ingresadoHubEn || null,
         ultimoOcurridoEn: docDb.ultimoOcurridoEn,
         alertasEmitidas: docDb.alertasEmitidas || [],
       };
@@ -195,6 +213,7 @@ async function procesarEvento(message, topic, partition) {
         shipmentId,
         ultimoEstado: tipo || "CREADO",
         venceEn: venceEn ? new Date(venceEn) : null,
+        ingresadoHubEn: null,
         ultimoOcurridoEn: ahoraSimulado,
         alertasEmitidas: [],
       };
@@ -212,6 +231,7 @@ async function procesarEvento(message, topic, partition) {
         $set: {
           ultimoEstado: registro.ultimoEstado,
           venceEn: registro.venceEn,
+          ingresadoHubEn: registro.ingresadoHubEn || null,
           ultimoOcurridoEn: registro.ultimoOcurridoEn,
           alertasEmitidas: registro.alertasEmitidas,
         },
@@ -232,6 +252,11 @@ async function procesarEvento(message, topic, partition) {
     registro.ultimoEstado = tipo;
     if (venceEn && !registro.venceEn) {
       registro.venceEn = new Date(venceEn);
+    }
+    if (tipo === "INGRESADO_HUB" && !registro.ingresadoHubEn) {
+      registro.ingresadoHubEn = ocurridoEn ? new Date(ocurridoEn) : ahoraSimulado;
+    } else if (tipo === "EN_REPARTO") {
+      registro.ingresadoHubEn = null;
     }
     registro.ultimoOcurridoEn = ahoraSimulado;
 
@@ -266,6 +291,7 @@ async function procesarEvento(message, topic, partition) {
         $set: {
           ultimoEstado: registro.ultimoEstado,
           venceEn: registro.venceEn,
+          ingresadoHubEn: registro.ingresadoHubEn || null,
           ultimoOcurridoEn: registro.ultimoOcurridoEn,
           alertasEmitidas: registro.alertasEmitidas,
         },
@@ -296,6 +322,7 @@ async function restaurarEstadoDesdeMongo() {
       shipmentId: doc.shipmentId,
       ultimoEstado: doc.ultimoEstado,
       venceEn: doc.venceEn,
+      ingresadoHubEn: doc.ingresadoHubEn || null,
       ultimoOcurridoEn: doc.ultimoOcurridoEn,
       alertasEmitidas: doc.alertasEmitidas || [],
     });

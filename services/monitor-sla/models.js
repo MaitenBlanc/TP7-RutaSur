@@ -6,6 +6,7 @@ const vencimientoSchema = new mongoose.Schema(
     shipmentId: { type: String, required: true, unique: true },
     ultimoEstado: { type: String, default: "CREADO" },
     venceEn: { type: Date, default: null },
+    ingresadoHubEn: { type: Date, default: null }, // Extensión: Paquetes dormidos en hub
     ultimoOcurridoEn: { type: Date, default: Date.now },
     alertasEmitidas: { type: [String], default: [] }, // Evita repetir la misma regla sobre el mismo envío
   },

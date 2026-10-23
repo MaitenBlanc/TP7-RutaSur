@@ -323,6 +323,65 @@ app.post('/api/escenarios/demorado', async (req, res) => {
     res.json({ message: 'Escenario Demorado disparado (alerta SLA Sin salida en instantes)', ...info });
 });
 
+// Paquete Dormido en Hub (Detecta ausencia de EN_REPARTO tras >= 6h simuladas en Hub)
+app.post('/api/escenarios/dormido-hub', async (req, res) => {
+    const shipmentId = proximoShipmentId('SHIP-DORMIDO');
+    const hubId = 'HUB-NORTE';
+    const zonaId = 'ZONA-1';
+    const franja = 'MAÑANA';
+    // Promesa holgada (vence en 24h simuladas, así no dispara "Sin salida" sino específicamente "Paquete dormido en hub")
+    const venceEn = getOcurridoEn(24 * 60);
+    // Ingresó al hub hace 6.5 horas simuladas (-390 min) y nunca recibió el evento esperado EN_REPARTO
+    const tCreacion = getOcurridoEn(-420);
+    const tIngresoHub = getOcurridoEn(-390);
+
+    await publicarEvento('envios.promesas', {
+        eventId: deterministicUuid('prom'),
+        shipmentId,
+        ocurridoEn: tCreacion,
+        venceEn,
+        hubId,
+        zonaId,
+        franja,
+        version: 1
+    }, shipmentId, { aplicarCaos: false });
+
+    await publicarEvento('envios.estados', {
+        eventId: deterministicUuid('evt'),
+        shipmentId,
+        tipo: 'CREADO',
+        ocurridoEn: tCreacion,
+        venceEn,
+        secuencia: 1,
+        hubId,
+        zonaId,
+        franja,
+        repartidorId: 'REP-15',
+        intentos: 1,
+        version: 1
+    }, shipmentId, { aplicarCaos: false });
+
+    await publicarEvento('envios.estados', {
+        eventId: deterministicUuid('evt'),
+        shipmentId,
+        tipo: 'INGRESADO_HUB',
+        ocurridoEn: tIngresoHub,
+        venceEn,
+        secuencia: 2,
+        hubId,
+        zonaId,
+        franja,
+        repartidorId: 'REP-15',
+        intentos: 1,
+        version: 1
+    }, shipmentId, { aplicarCaos: false });
+
+    res.json({
+        message: `Extensión Paquete Dormido en Hub disparada para ${shipmentId} (>6h simuladas sin EN_REPARTO)`,
+        shipmentId
+    });
+});
+
 // Escenario Tercer Fallo (Agota 3 intentos -> Devolución al comercio)
 app.post('/api/escenarios/tercer-fallo', async (req, res) => {
     const info = await simularCicloEnvio({ prefijo: 'SHIP-3FALLOS', modo: 'tercer-fallo', aplicarCaos: false, delayBaseMs: 900 });

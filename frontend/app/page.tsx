@@ -320,6 +320,14 @@ export default function TorreDeControl() {
               <FontAwesomeIcon icon={faRotate} />
               9. Borrar envíos y Reprocesar
             </button>
+
+            <button
+              onClick={() => dispararEscenario("dormido-hub")}
+              className="bg-pink-600 text-white text-sm px-3.5 py-2 rounded-lg shadow-sm hover:bg-pink-700 transition flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faClock} />
+              10. Extensión: Paquete Dormido en Hub
+            </button>
           </div>
 
           {/* Feedback del escenario disparado y Lag por grupo de consumidores (Observabilidad) */}
